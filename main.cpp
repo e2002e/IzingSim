@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <curses.h>
+#include <pthread.h>
+#include <unistd.h>
+
+const int N = 3;//on récupère le premier argument du programme avec atoi(argv[1]) si on veut 
+int row, col;
+void *cycle(void*);
+pthread_mutex_t mutex1;
 
 int main(int argc, char *argv[]){
     initscr();cbreak();
@@ -16,44 +23,53 @@ int main(int argc, char *argv[]){
     init_pair(7, COLOR_CYAN, COLOR_WHITE);
     init_pair(8, COLOR_RED, COLOR_BLACK);
     
-    
-	int row, col;
     getmaxyx(stdscr, row, col);
     printw("rows:%d\ncol:%d", row, col);
-    refresh();
     
+    mutex1 = PTHREAD_MUTEX_INITIALIZER;  
+    int Nthread = 8;
+    pthread_t threads[Nthread];
+    int id[Nthread];
+    int i, j;
+    //for(i=0; i < Nthread; i++) id[i] = pthread_create(&threads[i], NULL, cycle, NULL);
+    //for(j=0; j < Nthread; j++) id[j] = pthread_join(threads[j], NULL);
+    cycle(NULL);
+    sleep(5);
+    endwin();
     
-    int N = 8;//on récupère le premier argument du programme.
-	int spins[N][N][N];
-    double value;
-    char A[20];
-    value = pow(2.0, (double)N);
-    while(1){
-    for(int j=0; j < (int)value; j++){
-        for(int k=0; k < (int)value; k++){
-            for(int l=0; l < (int)value; l++){
-                for(int x=0; x < N; x++){
-                    for(int y=0; y < N; y++){
-                        for(int z=0; z < N; z++){
-                            spins[x][y][z] =  ((j & (int)pow(2.0, (double)x)) >> x) \
-                                            & ((k & (int)pow(2.0, (double)y)) >> y) \
-                                            & ((l & (int)pow(2.0, (double)z)) >> z);
-                            sprintf(A,"%d", spins[x][y][z]);
-                            attron(COLOR_PAIR(z+1));
-                            mvprintw((y*3+row/2-z)+3, (x*4+z)+3, A);
-                            attroff(COLOR_PAIR(z+1));/*
-                            if(y != 0)
-                                mvprintw((y*3+row/2-z)+2, (x*4+z)+3, "|");
-                            if(x != 0 && x != N - 1)
-                                mvprintw((y*3+row/2-z)+3, (x*4+z)+2, "-");
-                            */
-                        }
-                    }
+}
+void *cycle(void*)
+{
+    long int value;
+    char A[4];  
+    int spins[N][N][N];
+    for(int i=0;i<N;i++)
+        for(int j=0;j<N;j++)
+            for(int k=0;k<N;k++)
+                spins[i][j][k]=0;
+    value =(long int) pow(2.0, pow((double)N, 3.0));
+    
+    for(long int j=0; j < value; j++){
+        int x, y, z;
+        for(x=0; x < N; x++){
+            for(y = 0; y < N; y++){
+                for(z = 0; z < N; z++){
+                    spins[x][y][z] =  (((j % ((long int)pow(2.0, (double)N)-1)) & ((long int)pow(2.0, (double)(x+1))-1)) 
+                                        >> x) &
+                                      (((j % ((long int)pow(2.0, pow((double)N, 2.0))-1)) & ((long int)pow(2.0, (double)(y+1)*(y+1))-1)) 
+                                        >> y) &
+                                      (((j % ((long int)pow(2.0, pow((double)N, 3.0))-1)) & ((long int)pow(2.0, pow((double)(z+1),3.0))-1))
+                                        >> z)
+                                      ;
+                    snprintf(A, 2, "%d",  spins[x][y][z]);
+                    attron(COLOR_PAIR(z+1));
+                    mvprintw((y*3+row/4-z)+3, (x*4+z)+3, A);
+                    attroff(COLOR_PAIR(z+1)); 
                 }
-                refresh();    
             }
         }
-    }};
-	endwin();
-	return 0;
+        refresh();
+    }
+    return NULL;
 }
+ 
