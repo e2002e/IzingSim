@@ -35,7 +35,7 @@ int main(int argc, char *argv[]){
     //for(j=0; j < Nthread; j++) id[j] = pthread_join(threads[j], NULL);
     cycle(NULL);
     sleep(5);
-    endwin();
+    //endwin();
     
 }
 void *cycle(void*)
@@ -57,9 +57,9 @@ void *cycle(void*)
                     spins[x][y][z] =  (((j % ((long int)pow(2.0, (double)N)-1)) & ((long int)pow(2.0, (double)(x+1))-1)) 
                                         >> x) &
                                       (((j % ((long int)pow(2.0, pow((double)N, 2.0))-1)) & ((long int)pow(2.0, (double)(y+1)*(y+1))-1)) 
-                                        >> y) &
+                                        >> (int)((x)*(y))) &
                                       (((j % ((long int)pow(2.0, pow((double)N, 3.0))-1)) & ((long int)pow(2.0, pow((double)(z+1),3.0))-1))
-                                        >> z)
+                                        >> (int)((x)*(y)*(z)))
                                       ;
                     snprintf(A, 2, "%d",  spins[x][y][z]);
                     attron(COLOR_PAIR(z+1));
