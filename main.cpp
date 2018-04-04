@@ -2,101 +2,108 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include <curses.h>
-//#include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 
-double doP(), doZ(), doH();//Les fonctions servant aux calculs 
-int row, col;//des variables pour ncurses
+double doP(), doZ(), doH(), sumP();//Les fonctions servant aux calculs
 void *cycle(void*);//ma fonction principal qui devrais plutôt s'appeller "doCalc" ou un truc ds le genre
-//pthread_mutex_t mutex1;
 int N;//la variable qui sert a determiner le nombre de spins
 double T, h, J;
 int *spins;
-double Boltz;
+double Beta;
+bool longrange;
+int circular;
 
 int main(int argc, char *argv[]){
     srand(time(NULL));// random generator init
-    // all the ncurses init
-    initscr();cbreak();noecho();
-    if(has_colors() == false) mvprintw(0, 10, "Terminal doesn't support colors..\n");
-    start_color();
-    init_pair(1, COLOR_RED, COLOR_WHITE);
-    init_pair(2, COLOR_CYAN, COLOR_BLACK);
-    getmaxyx(stdscr, row, col);
-    //
-    /*threads (not used)
-    mutex1 = PTHREAD_MUTEX_INITIALIZER;
-    int Nthread = 8;
-    pthread_t threads[Nthread];
-    int id[Nthread];
-    int i, j;
-    //for(i=0; i < Nthread; i++) id[i] = pthread_create(&threads[i], NULL, cycle, NULL);
-    //for(j=0; j < Nthread; j++) id[j] = pthread_join(threads[j], NULL);
-    */
     //init variables
-    T = 0.0;
+    longrange = false;
     h = 0.0;
-    J = 0.5;
-    Boltz = (1.0/(1.38064852*pow(10.0, -23.0))) * (double)T;
+    J = 1.0;
+    Beta = 1.0;
+    circular = 0;
+    char chaining[13] = {"strict chain"};
 
     N = atoi(argv[1]);//N est le premier argument du programme, segfault si omit
     spins = new int[N];
     for(int i=0; i<N; i++)
     {
-        spins[i] = rand()%2;//juste une initialisation random a la con  
+        spins[i] = 1;//juste une initialisation random a la con  
         if(spins[i] == 0)
             spins[i] = -1;
+        printf("%d ", spins[i]);
     }
+    spins[1] = -1;
     //Le module de menu, à dévelloper
     char c[10];
-    while(1){
-        mvprintw(0,0,"1)calculate\n2)system temperature:\t%12lf\n3)magnitude:\t\t%12lf\nand paramagnitude:\t%12lf\n4)exit", T, J, h );
-        getstr(c);
-        if(atoi(c) < 1 || atoi(c) > 4) continue;
+    while(1)
+    {
+        printf( "\n1)calculate\t\t4)longrange %d\n2)Beta:\t%lf\t5)chaining method: %s\n"\
+                "3)magnitude:%lf\t6)exit\nparamagnitude:%lf\n", longrange, Beta, chaining, J, h);
+        scanf("%s", c);
+        if(atoi(c) < 1 || atoi(c) > 6) continue;
         switch(atoi(c)){
             case 1:
                 cycle(NULL);
                 break;
             case 2:
-                mvprintw(1,0,"Enter temperature then Enter                   ");
-                getstr(c);
-                T = atof(c);
-                Boltz = (1.0/(1.38064852*pow(10.0, -23.0))) * (double)T;
+                printf("Enter value for Beta\n");
+                scanf("%s", c);
+                Beta = atof(c);
                 break;
             case 4:
-                endwin();
+                if(longrange)
+                    longrange = 0;
+                else longrange = 1;
+                break;
+            case 5:
+                if(circular)
+                {   circular = 0;
+                    strcpy(chaining, "strict chain");
+                }
+                else
+                {   circular = 1;
+                    strcpy(chaining, "ring");
+                }
+                break;
+            case 6:
                 exit(0);
             default:
                 continue;
         }
     }
-    endwin(); 
 }
 void *cycle(void*)
 {
     double P = doP();//doP() appelle les autres fonctions
-    mvprintw(5, 0, "Proba(C):\t\t%12lf", P);
-    mvprintw(6, 0, "Hamiltonian(C):\t\t%12lf", doH());
-    refresh();
+    printf("Hamiltonian(C):\t\t%lf\nNormalized H:\t\t%lf\nProba(C):\t\t%lf\n",doH(), doZ(), P);
+    printf("Sum of all P:%lf\n", sumP());
     return NULL;
 }
 double seekNeighbours(int i)
 {
     double sum;
-    int post = N - i; //i est l'index du spin, N - i donnes les spins après donc variable nommée 'post'
+    int post = N - i;    //i est l'index du spin, N - i donnes les spins après donc variable nommée 'post'
     int pre  = N - post; //même logique, mais avec les spins d'avant.
-    for(int j=0; j<pre; j++)
-        sum += (double)spins[i]*((double)spins[j]*(1/pow((double)pre-j, 3.0)));
-    for(int j=N; j>post; j--)
-        sum += (double)spins[i]*((double)spins[j]*(1/pow((double)j-post, 3.0)));
+    for(int j=0; j<pre; j++){
+        sum += (double)spins[i]*((double)spins[j]/pow((double)pre+j, 3.0));
+        if(circular)
+            if(post<N/2)
+                sum += (double)spins[i]*((double)spins[j]/pow((double)post+j, 3.0));
+    }
+    for(int j=N; j>post; j--){
+        sum += (double)spins[i]*((double)spins[j]/pow((double)j-post, 3.0));
+        if(circular)
+            if(pre<N/2)
+                sum += (double)spins[i]*((double)spins[j]/pow((double)pre-j, 3.0));
+    }
     //ces deux boucles additionnent le spin actuel avec ses voisins (d'avant et d'après) en multipliant ces derniers par 1/r^3
     return sum;
 }
 
 double doP()
 {
-    double P = (1/doZ()) * exp(-Boltz*doH()); //la formule est plutôt explicite.
+    double P = (1/doZ()) * exp(-Beta*doH()); //la formule est plutôt explicite.
     return P; 
 }
 
@@ -104,7 +111,23 @@ double doH()
 {
     double H = 0;
     for(int i=0; i<N; i++){
-        H += -seekNeighbours(i)*J - (double)spins[i]*h;//Les voisins * J - le spin * h
+        if(longrange)
+            H += -seekNeighbours(i)*J - (double)spins[i]*h;//moin les voisins * J - le spin * h
+        else
+        {
+            if(circular)
+            {
+                if(i < N-1)
+                    H += -((double)spins[i]*spins[i+1])*J - (double) spins[i]*h;
+                else if(i == N-1)
+                    H += -((double)spins[i]*spins[0])*J - (double) spins[i]*h;
+            }
+            else
+            {   
+                if(i < N-1)
+                    H += -((double)spins[i]*spins[i+1])*J - (double) spins[i]*h;
+            }
+        }
     }
     return H;
 }
@@ -115,22 +138,49 @@ double doZ()
     int *save = new int[N];
     for(int i=0; i<N; i++)
         save[i] = spins[i]; // je sauvegarde la config car elle va être remplacée
+    
     for(long int a=0;a<value;a++)
     {
-        double sum = 0;
         for(int i=0;i<N;i++)
         {
-            spins[i] = a & (long int)pow(2.0, (double)i) >> i;  //un AND (binaire) avec 2^i montre si le bit(mapé sur l'index du tableau)
-                                                                //est utilisé, suivit d'un shift i pour avoir tjr 0 ou 1
+            if(i==0)
+                spins[i] = a & 1;   //un AND (binaire) avec 2^i montre si le bit(mapé sur l'index
+                                    //du tableau) est utilisé, suivit d'un shift i pour avoir tjr 0 ou 1
+            else
+                spins[i] = (a & (long int)pow(2.0, (double)i)) >> i;
             if(spins[i] == 0)
                 spins[i] = -1; //on convertit les zéro en -1
-            sum += seekNeighbours(i);
         }
-        Z += sum * exp(-Boltz*doH());
+        Z += exp(-Beta*doH());
     }
+    
     for(int i=0; i<N; i++)
         spins[i] = save[i]; // on reprend la config originale.
-    mvprintw(7, 0, "Normalized Hamiltonian:\t%12lf", Z);//on output ici au lieu de rappeller la fonction comme pour H(C) car
-                                                    //soucis de performances
     return Z;
+}
+double sumP()
+{
+    double sum;
+    long int value = (long int) pow(2.0, (double)N);
+    int *save = new int[N];
+    for(int i=0; i<N; i++)
+        save[i] = spins[i]; //je sauvegarde la config car elle va être remplacée
+    for(long int a = 0; a < value; a++)
+    {
+        for(int i=0;i<N;i++)
+        {
+            if(i==0)
+                spins[i] = a & 1;   //un AND (binaire) avec 2^i montre si le bit(mapé sur l'index
+                                    //du tableau) est utilisé, suivit d'un shift i pour avoir tjr 0 ou 1
+            else
+                spins[i] = (a & (long int)pow(2.0, (double)i)) >> i;
+            if(spins[i] == 0)
+                spins[i] = -1; //on convertit les zéro en -1
+        }
+        sum += doP();// à ce moment la on fait P pour chaques config ce qui indui une loop sur chaques config suplémentaire 
+                    // pour trouver Z dans doZ(), ça peut être lourd avec ne serait-ce qu'une dixaine de spins.
+    }
+    for(int i=0; i<N; i++)
+        spins[i] = save[i];
+    return sum;
 }
