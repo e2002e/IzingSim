@@ -19,7 +19,7 @@ int main(int argc, char *argv[]){
     //init variables
     longrange = false;
     h = 0.0;
-    J = 1.0;
+    J = 0.1;
     Beta = 1.0;
     circular = 0;
     char chaining[13] = {"strict chain"};
@@ -33,7 +33,6 @@ int main(int argc, char *argv[]){
             spins[i] = -1;
         printf("%d ", spins[i]);
     }
-    spins[1] = -1;
     //Le module de menu, à dévelloper
     char c[10];
     while(1)
@@ -77,16 +76,15 @@ void *cycle(void*)
 {
     double P = doP();//doP() appelle les autres fonctions
     printf("Hamiltonian(C):\t\t%lf\nNormalized H:\t\t%lf\nProba(C):\t\t%lf\n",doH(), doZ(), P);
-    printf("Sum of all P:%lf\n", sumP());
-    return NULL;
 }
 double seekNeighbours(int i)
 {
     double sum;
     int post = N - i;    //i est l'index du spin, N - i donnes les spins après donc variable nommée 'post'
     int pre  = N - post; //même logique, mais avec les spins d'avant.
+    /*
     for(int j=0; j<pre; j++){
-        sum += (double)spins[i]*((double)spins[j]/pow((double)pre+j, 3.0));
+        sum += (double)spins[i]*((double)spins[j]/pow((double)pre+1-j, 3.0));
         if(circular)
             if(post<N/2)
                 sum += (double)spins[i]*((double)spins[j]/pow((double)post+j, 3.0));
@@ -95,7 +93,25 @@ double seekNeighbours(int i)
         sum += (double)spins[i]*((double)spins[j]/pow((double)j-post, 3.0));
         if(circular)
             if(pre<N/2)
-                sum += (double)spins[i]*((double)spins[j]/pow((double)pre-j, 3.0));
+                sum += (double)spins[i]*((double)spins[j]/pow((double)j-pre, 3.0));
+    }
+    */
+    for(int j = 0; j < N; j++)
+    {
+        if(j<i){
+            sum += (double)spins[i] * ( (double)spins[j]/pow((double)i-j, 3.0));
+            if(circular){
+                if(i > 0 && N-i+j < N)
+                    sum += (double)spins[i] * ( (double)spins[j]/pow((double)N+j-i, 3.0));
+            }
+        }
+        else if(j>i){
+            sum += (double)spins[i] * ( (double)spins[j]/pow((double)j-i, 3.0));
+            if(circular){
+                if(i < N-1 && N-j+i < N)
+                    sum += (double)spins[i] * ( (double)spins[j]/pow((double)N-j+i, 3.0));
+            }
+        }
     }
     //ces deux boucles additionnent le spin actuel avec ses voisins (d'avant et d'après) en multipliant ces derniers par 1/r^3
     return sum;
