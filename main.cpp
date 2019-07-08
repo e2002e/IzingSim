@@ -76,6 +76,7 @@ void *cycle(void*)
 {
     double P = doP();//doP() appelle les autres fonctions
     printf("Hamiltonian(C):\t\t%lf\nNormalized H:\t\t%lf\nProba(C):\t\t%lf\n",doH(), doZ(), P);
+    return NULL;
 }
 double seekNeighbours(int i)
 {
