@@ -120,7 +120,7 @@ double seekNeighbours(int i)
 
 double doP()
 {
-    double P = (1/doZ()) * exp(-Beta*doH()); //la formule est plutôt explicite.
+    double P = (1/doZ()) * exp(-Beta*doH()); //la formule est plutôt explicite. EDIT:aller, je laisse ce commentaire...
     return P; 
 }
 
