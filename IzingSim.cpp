@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <cstring>
 #include <ncurses.h>
-#include <omp.h>
 
 double doP(), doZ(), doH(), sumP();//Les fonctions servant aux calculs
 void *cycle(void*), equilibrate(int iter), display();
@@ -283,7 +282,7 @@ void display() {
     mvprintw(spacer+6,	0, "Normalized H:\t\t%lf", doZ());
     mvprintw(spacer+7,	0, "Proba(C):\t\t%lf", doP());
     if(dosump)
-   		mvprintw(spacer+8,	0, "Sum of Probas: \t%f", sumP());
+   		mvprintw(spacer+8,	0, "Sum of Probas: \t\t%f", sumP());
 	refresh();
 }
 
@@ -337,8 +336,7 @@ double doZ()
     int *save = new int[N];
     for(int i=0; i<N; i++)
         save[i] = spins[i];// je sauvegarde la config car elle va être remplacée
- 	int mt = omp_get_max_threads();
- 
+ 	
 	//for(int t=0; t<mt; ++t) {
 	//#pragma omp parallel firstprivate(spins) num_threads(mt)
 	//{

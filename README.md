@@ -1,5 +1,12 @@
 # IzingSim
 
 Model of Izing computations test.  
-Mathematician: maxime baczky http://gammamaths.fr/  
-Programmer: yvain douard.  
+
+COMPILE:  
+make
+
+USAGE:  
+./izing <string representing the spins>  
+./izing 100110001  
+
+From then you have an interactive menu thanks to ncurses, which makes it a linux exclusive program.  
